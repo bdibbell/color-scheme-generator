@@ -213,9 +213,10 @@
           <label>
             <input type="checkbox" id="modeToggle"> Enable Light Mode
           </label>
-          <div style="display: flex; gap: 0.5rem;">
+          <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
             <button class="toggle-btn" id="advancedToggle">Show Advanced Controls</button>
-            <button class="toggle-btn" id="copyThemeBtn" style="border-color: var(--acc6); color: var(--acc6);">Copy Theme JSON</button>
+            <button class="toggle-btn" id="copyThemeBtn" style="border-color: var(--acc6); color: var(--acc6);">Copy JSON</button>
+            <button class="toggle-btn" id="exportItermBtn" style="border-color: var(--acc0); color: var(--acc0);">Export for iTerm2 (.itermcolors) <strong>beta</strong> </button>
           </div>
         </div>
       </div>
@@ -495,6 +496,61 @@
       const oldText = copyThemeBtn.textContent;
       copyThemeBtn.textContent = 'Copied!';
       setTimeout(() => copyThemeBtn.textContent = oldText, 2000);
+    });
+
+    exportItermBtn.addEventListener('click', () => {
+      const getRgbComponents = (varName) => {
+        const color = window.getComputedStyle(document.documentElement).getPropertyValue(varName);
+        const rgb = resolveToRgb(color);
+        return rgb ? { r: rgb[0]/255, g: rgb[1]/255, b: rgb[2]/255 } : null;
+      };
+
+      const mapping = {
+        'Ansi 0 Color': '--base02',
+        'Ansi 1 Color': '--acc4', // Red-ish
+        'Ansi 2 Color': '--acc6', // Green-ish
+        'Ansi 3 Color': '--acc5', // Yellow-ish
+        'Ansi 4 Color': '--acc0', // Blue-ish
+        'Ansi 5 Color': '--acc2', // Magenta-ish
+        'Ansi 6 Color': '--acc7', // Cyan-ish
+        'Ansi 7 Color': '--base2',
+        'Ansi 8 Color': '--base03',
+        'Ansi 9 Color': '--acc4',
+        'Ansi 10 Color': '--base01',
+        'Ansi 11 Color': '--base00',
+        'Ansi 12 Color': '--base0',
+        'Ansi 13 Color': '--acc3', // Violet-ish
+        'Ansi 14 Color': '--base1',
+        'Ansi 15 Color': '--base3',
+        'Background Color': '--base03',
+        'Foreground Color': '--base0',
+        'Cursor Color': '--base1',
+        'Selection Color': '--base02'
+      };
+
+      let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
+      xml += '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n';
+      xml += '<plist version="1.0">\n<dict>\n';
+
+      for (const [key, varName] of Object.entries(mapping)) {
+        const comps = getRgbComponents(varName);
+        if (!comps) continue;
+        xml += `  <key>${key}</key>\n  <dict>\n`;
+        xml += `    <key>Red Component</key><real>${comps.r}</real>\n`;
+        xml += `    <key>Green Component</key><real>${comps.g}</real>\n`;
+        xml += `    <key>Blue Component</key><real>${comps.b}</real>\n`;
+        xml += `  </dict>\n`;
+      }
+
+      xml += '</dict>\n</plist>';
+
+      const blob = new Blob([xml], { type: 'application/x-itermcolors' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `algo-theme-${hueSlider.value}.itermcolors`;
+      a.click();
+      URL.revokeObjectURL(url);
     });
     
     advancedToggle.addEventListener('click', () => {
