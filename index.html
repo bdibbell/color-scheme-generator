@@ -213,7 +213,10 @@
           <label>
             <input type="checkbox" id="modeToggle"> Enable Light Mode
           </label>
-          <button class="toggle-btn" id="advancedToggle">Show Advanced Controls</button>
+          <div style="display: flex; gap: 0.5rem;">
+            <button class="toggle-btn" id="advancedToggle">Show Advanced Controls</button>
+            <button class="toggle-btn" id="copyThemeBtn" style="border-color: var(--acc6); color: var(--acc6);">Copy Theme JSON</button>
+          </div>
         </div>
       </div>
 
@@ -261,6 +264,7 @@
     const lumSlider = document.getElementById('lumSlider');
     const modeToggle = document.getElementById('modeToggle');
     const advancedToggle = document.getElementById('advancedToggle');
+    const copyThemeBtn = document.getElementById('copyThemeBtn');
     const advancedControls = document.getElementById('advancedControls');
     
     const hueVal = document.getElementById('hueVal');
@@ -465,6 +469,33 @@
     chromaSlider.addEventListener('input', updateTheme);
     lumSlider.addEventListener('input', updateTheme);
     formatSelect.addEventListener('change', renderSwatches);
+
+    copyThemeBtn.addEventListener('click', () => {
+      const themeData = {
+        meta: {
+          hue: hueSlider.value,
+          contrast: contrastSlider.value,
+          saturation: chromaSlider.value,
+          luminance: lumSlider.value,
+          mode: document.body.getAttribute('data-theme') || 'dark'
+        },
+        colors: {}
+      };
+
+      const getHex = (varName) => {
+        const color = window.getComputedStyle(document.documentElement).getPropertyValue(varName);
+        const rgb = resolveToRgb(color);
+        return rgb ? rgbToHex(rgb[0], rgb[1], rgb[2]) : null;
+      };
+
+      baseNames.forEach(name => themeData.colors[name] = getHex(`--${name}`));
+      for (let i = 0; i < 8; i++) themeData.colors[`acc${i}`] = getHex(`--acc${i}`);
+
+      navigator.clipboard.writeText(JSON.stringify(themeData, null, 2));
+      const oldText = copyThemeBtn.textContent;
+      copyThemeBtn.textContent = 'Copied!';
+      setTimeout(() => copyThemeBtn.textContent = oldText, 2000);
+    });
     
     advancedToggle.addEventListener('click', () => {
       const isVisible = advancedControls.classList.toggle('visible');
