@@ -3,7 +3,7 @@
 An interactive, browser-based tool for generating mathematically-derived,
 Solarized-inspired color schemes using **LCH (Lightness, Chroma, Hue)** color logic.
 
-**[Live Demo](https://bdibbell.github.io/theme-generator/)**
+**[Live Demo](https://bdibbell.github.io/color-scheme-generator/)**
 
 ## Overview
 
