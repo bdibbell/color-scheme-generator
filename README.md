@@ -1,4 +1,4 @@
-# Algorithmic Theme Generator
+# Algorithmic Color Scheme Generator
 
 An interactive, browser-based tool for generating mathematically-derived,
 Solarized-inspired color schemes using **LCH (Lightness, Chroma, Hue)** color logic.
