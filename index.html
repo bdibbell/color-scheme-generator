@@ -61,7 +61,7 @@
     }
 
     .container {
-      max-width: 800px;
+      max-width: 1000px;
       width: 100%;
     }
 
@@ -88,21 +88,45 @@
 
     .palette-grid {
       display: grid;
-      grid-template-columns: repeat(8, 1fr);
-      gap: 0.5rem;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 0.8rem;
       margin-bottom: 2rem;
     }
 
     .swatch {
-      height: 60px;
+      height: 120px;
       border-radius: 4px;
       display: flex;
-      align-items: flex-end;
+      flex-direction: column;
+      justify-content: flex-end;
       padding: 0.5rem;
-      font-size: 0.75rem;
+      font-size: 0.7rem;
       font-family: monospace;
       color: #fff;
       text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+      border: 1px solid rgba(255,255,255,0.1);
+      overflow: hidden;
+    }
+
+    .swatch-name {
+      font-weight: bold;
+      font-size: 0.8rem;
+      margin-bottom: auto;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .swatch-value {
+      cursor: pointer;
+      opacity: 0.8;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .swatch-value:hover {
+      opacity: 1;
+      text-decoration: underline;
     }
 
     .mockup {
@@ -127,6 +151,14 @@
 <body>
 
   <div class="container">
+    <header style="margin-bottom: 2rem;">
+      <h1 style="color: var(--text-emphasized); margin-bottom: 0.5rem;">Algorithmic Theme Generator</h1>
+      <p style="margin: 0; line-height: 1.6; opacity: 0.9;">
+        Generate custom Solarized-inspired color schemes using mathematically-derived LCH color steps. 
+        Adjust the <strong>Base Hue</strong> to pick your foundation color, use <strong>Contrast Emphasis</strong> to refine readability, and toggle between formats to copy values for your dev environment.
+      </p>
+    </header>
+
     <div class="controls">
       <div class="control-group">
         <label for="hueSlider">Base Hue (<span id="hueVal">210</span>&deg;)</label>
@@ -140,6 +172,16 @@
         <label>
           <input type="checkbox" id="modeToggle"> Enable Light Mode
         </label>
+      </div>
+      <div class="control-group">
+        <label for="formatSelect">Display Format</label>
+        <select id="formatSelect">
+          <option value="all">Show All</option>
+          <option value="HEX" selected>Hex Only</option>
+          <option value="RGB">RGB Only</option>
+          <option value="HSL">HSL Only</option>
+          <option value="none">None</option>
+        </select>
       </div>
     </div>
 
@@ -170,6 +212,7 @@
     const modeToggle = document.getElementById('modeToggle');
     const hueVal = document.getElementById('hueVal');
     const contrastVal = document.getElementById('contrastVal');
+    const formatSelect = document.getElementById('formatSelect');
     
     // The exact Solarized L* architecture
     const baseLightness = [15, 20, 45, 50, 60, 65, 92, 97];
@@ -190,7 +233,7 @@
 
       const root = document.documentElement;
 
-      // 1. Update Base Colors (Added % after the lightness calculation)
+      // 1. Update Base Colors
       baseNames.forEach((name, index) => {
         const lchString = `lch(${adjustedLightness[index].toFixed(1)}% var(--chroma-base) ${hue})`;
         root.style.setProperty(`--${name}`, lchString);
@@ -202,7 +245,80 @@
         root.style.setProperty(`--acc${i}`, `lch(var(--lightness-accent) var(--chroma-accent) ${rotatedHue})`);
       }
 
-      renderSwatches();
+      // We need a small delay or requestAnimationFrame to ensure CSS variables are applied
+      // before we read them back via getComputedStyle in renderSwatches
+      scheduleRender();
+    }
+
+    let renderPending = false;
+    function scheduleRender() {
+      if (renderPending) return;
+      renderPending = true;
+      requestAnimationFrame(() => {
+        renderSwatches();
+        renderPending = false;
+      });
+    }
+
+    const colorCanvas = document.createElement('canvas');
+    colorCanvas.width = 1;
+    colorCanvas.height = 1;
+    const colorCtx = colorCanvas.getContext('2d', { willReadFrequently: true });
+
+    function resolveToRgb(colorStr) {
+      colorCtx.clearRect(0, 0, 1, 1);
+      colorCtx.fillStyle = colorStr;
+      colorCtx.fillRect(0, 0, 1, 1);
+      const data = colorCtx.getImageData(0, 0, 1, 1).data;
+      return [data[0], data[1], data[2]];
+    }
+
+    function getLuminance(r, g, b) {
+      const a = [r, g, b].map(v => {
+        v /= 255;
+        return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+      });
+      return a[0] * 0.2126 + a[1] * 0.7152 + a[2] * 0.0722;
+    }
+
+    function rgbToHex(r, g, b) {
+      return "#" + [r, g, b].map(x => {
+        const hex = x.toString(16);
+        return hex.length === 1 ? "0" + hex : hex;
+      }).join("");
+    }
+
+    function rgbToHsl(r, g, b) {
+      r /= 255; g /= 255; b /= 255;
+      const max = Math.max(r, g, b), min = Math.min(r, g, b);
+      let h, s, l = (max + min) / 2;
+      if (max === min) {
+        h = s = 0;
+      } else {
+        const d = max - min;
+        s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+        switch (max) {
+          case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+          case g: h = (b - r) / d + 2; break;
+          case b: h = (r - g) / d + 4; break;
+        }
+        h /= 6;
+      }
+      return `hsl(${Math.round(h * 360)}, ${Math.round(s * 100)}%, ${Math.round(l * 100)}%)`;
+    }
+
+    function createSwatch(name, varName) {
+      const div = document.createElement('div');
+      div.className = 'swatch';
+      div.style.backgroundColor = `var(${varName})`;
+      
+      const nameEl = document.createElement('div');
+      nameEl.className = 'swatch-name';
+      nameEl.textContent = name;
+      div.appendChild(nameEl);
+
+      // We'll populate values after appending to DOM
+      return div;
     }
 
     function renderSwatches() {
@@ -212,28 +328,74 @@
       baseContainer.innerHTML = '';
       accentContainer.innerHTML = '';
 
+      const swatches = [];
+
       // Render Bases
       baseNames.forEach(name => {
-        const div = document.createElement('div');
-        div.className = 'swatch';
-        div.style.backgroundColor = `var(--${name})`;
-        div.textContent = name;
+        const div = createSwatch(name, `--${name}`);
         baseContainer.appendChild(div);
+        swatches.push({ el: div, name: name });
       });
 
       // Render Accents
       for (let i = 0; i < 8; i++) {
-        const div = document.createElement('div');
-        div.className = 'swatch';
-        div.style.backgroundColor = `var(--acc${i})`;
-        div.textContent = `acc${i}`;
+        const div = createSwatch(`acc${i}`, `--acc${i}`);
         accentContainer.appendChild(div);
+        swatches.push({ el: div, name: `acc${i}` });
       }
+
+      // Now update the values
+      swatches.forEach(s => {
+        const computed = window.getComputedStyle(s.el).backgroundColor;
+        const rgb = resolveToRgb(computed);
+        
+        if (rgb) {
+          const [r, g, b] = rgb;
+          const hex = rgbToHex(r, g, b);
+          const hsl = rgbToHsl(r, g, b);
+          
+          // Adjust text color based on luminance
+          const luminance = getLuminance(r, g, b);
+          s.el.style.color = luminance > 0.45 ? '#000' : '#fff';
+          s.el.style.textShadow = luminance > 0.45 ? 'none' : '0 1px 2px rgba(0,0,0,0.8)';
+
+          const values = [
+            { label: 'HEX', val: hex },
+            { label: 'RGB', val: `rgb(${r},${g},${b})` },
+            { label: 'HSL', val: hsl }
+          ];
+
+          const selectedFormat = formatSelect.value;
+
+          values.forEach(v => {
+            if (selectedFormat !== 'all' && selectedFormat !== v.label) return;
+
+            const valEl = document.createElement('div');
+            valEl.className = 'swatch-value';
+            valEl.textContent = v.val;
+            valEl.title = `Click to copy ${v.label}`;
+            valEl.onclick = () => {
+              navigator.clipboard.writeText(v.val);
+              const oldText = valEl.textContent;
+              valEl.textContent = 'Copied!';
+              setTimeout(() => valEl.textContent = oldText, 1000);
+            };
+            s.el.appendChild(valEl);
+          });
+        } else {
+          // If we couldn't parse (maybe it's still lch() in a browser that supports it but doesn't downmix)
+          const fallback = document.createElement('div');
+          fallback.className = 'swatch-value';
+          fallback.textContent = computed;
+          s.el.appendChild(fallback);
+        }
+      });
     }
 
     // Event Listeners
     hueSlider.addEventListener('input', updateTheme);
     contrastSlider.addEventListener('input', updateTheme);
+    formatSelect.addEventListener('change', renderSwatches);
     modeToggle.addEventListener('change', (e) => {
       document.body.setAttribute('data-theme', e.target.checked ? 'light' : 'dark');
     });
