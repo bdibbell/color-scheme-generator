@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Algorithmic Theme Generator</title>
+  <style>
+    :root {
+      /* Structural Variables */
+      --chroma-base: 12;
+      --chroma-accent: 65;
+      --lightness-accent: 60%; /* Added % here */
+      
+      /* Base Colors (Added % to lightness values) */
+      --base03: lch(15% var(--chroma-base) 210);
+      --base02: lch(20% var(--chroma-base) 210);
+      --base01: lch(45% var(--chroma-base) 210);
+      --base00: lch(50% var(--chroma-base) 210);
+      --base0:  lch(60% var(--chroma-base) 210);
+      --base1:  lch(65% var(--chroma-base) 210);
+      --base2:  lch(92% var(--chroma-base) 210);
+      --base3:  lch(97% var(--chroma-base) 210);
+
+      /* Accent Colors */
+      --acc0: lch(var(--lightness-accent) var(--chroma-accent) 210);
+      --acc1: lch(var(--lightness-accent) var(--chroma-accent) 255);
+      --acc2: lch(var(--lightness-accent) var(--chroma-accent) 300);
+      --acc3: lch(var(--lightness-accent) var(--chroma-accent) 345);
+      --acc4: lch(var(--lightness-accent) var(--chroma-accent) 30);
+      --acc5: lch(var(--lightness-accent) var(--chroma-accent) 75);
+      --acc6: lch(var(--lightness-accent) var(--chroma-accent) 120);
+      --acc7: lch(var(--lightness-accent) var(--chroma-accent) 165);
+
+      /* Dark Mode Defaults */
+      --bg-main: var(--base03);
+      --bg-highlight: var(--base02);
+      --text-subtle: var(--base01);
+      --text-main: var(--base0);
+      --text-emphasized: var(--base1);
+    }
+
+    /* Light Mode Inversion */
+    [data-theme="light"] {
+      --bg-main: var(--base3);
+      --bg-highlight: var(--base2);
+      --text-subtle: var(--base1);
+      --text-main: var(--base00);
+      --text-emphasized: var(--base01);
+    }
+
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background-color: var(--bg-main);
+      color: var(--text-main);
+      transition: background-color 0.3s, color 0.3s;
+      margin: 0;
+      padding: 2rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .container {
+      max-width: 800px;
+      width: 100%;
+    }
+
+    .controls {
+      background: var(--bg-highlight);
+      padding: 1.5rem;
+      border-radius: 8px;
+      margin-bottom: 2rem;
+      display: grid;
+      gap: 1rem;
+      border: 1px solid var(--text-subtle);
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    label {
+      font-weight: bold;
+      color: var(--text-emphasized);
+    }
+
+    .palette-grid {
+      display: grid;
+      grid-template-columns: repeat(8, 1fr);
+      gap: 0.5rem;
+      margin-bottom: 2rem;
+    }
+
+    .swatch {
+      height: 60px;
+      border-radius: 4px;
+      display: flex;
+      align-items: flex-end;
+      padding: 0.5rem;
+      font-size: 0.75rem;
+      font-family: monospace;
+      color: #fff;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+    }
+
+    .mockup {
+      background: var(--bg-main);
+      border: 2px solid var(--bg-highlight);
+      border-radius: 8px;
+      padding: 1.5rem;
+      font-family: monospace;
+      font-size: 1.1rem;
+      line-height: 1.5;
+      overflow-x: auto;
+    }
+
+    /* Syntax Highlighting Mockup */
+    .keyword { color: var(--acc3); }
+    .string { color: var(--acc6); }
+    .function { color: var(--acc0); }
+    .comment { color: var(--text-subtle); font-style: italic; }
+    .operator { color: var(--acc4); }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <div class="controls">
+      <div class="control-group">
+        <label for="hueSlider">Base Hue (<span id="hueVal">210</span>&deg;)</label>
+        <input type="range" id="hueSlider" min="0" max="360" value="210">
+      </div>
+      <div class="control-group">
+        <label for="contrastSlider">Contrast Emphasis (<span id="contrastVal">1.0</span>x)</label>
+        <input type="range" id="contrastSlider" min="0.5" max="1.5" step="0.1" value="1.0">
+      </div>
+      <div class="control-group">
+        <label>
+          <input type="checkbox" id="modeToggle"> Enable Light Mode
+        </label>
+      </div>
+    </div>
+
+    <h3 style="color: var(--text-emphasized)">Base Tones (Structure)</h3>
+    <div class="palette-grid" id="basePalette">
+      </div>
+
+    <h3 style="color: var(--text-emphasized)">Accent Tones (Syntax)</h3>
+    <div class="palette-grid" id="accentPalette">
+      </div>
+
+    <h3 style="color: var(--text-emphasized)">Editor Mockup</h3>
+    <div class="mockup">
+<span class="comment">// Theme generated using algorithmic LCH steps</span>
+<span class="keyword">function</span> <span class="function">calculateContrast</span>(luminance) {
+  <span class="keyword">const</span> threshold <span class="operator">=</span> <span class="string">0.5</span>;
+  <span class="keyword">if</span> (luminance <span class="operator"><</span> threshold) {
+    <span class="keyword">return</span> <span class="string">"Dark Mode Active"</span>;
+  }
+  <span class="keyword">return</span> <span class="string">"Light Mode Active"</span>;
+}
+    </div>
+  </div>
+
+  <script>
+    const hueSlider = document.getElementById('hueSlider');
+    const contrastSlider = document.getElementById('contrastSlider');
+    const modeToggle = document.getElementById('modeToggle');
+    const hueVal = document.getElementById('hueVal');
+    const contrastVal = document.getElementById('contrastVal');
+    
+    // The exact Solarized L* architecture
+    const baseLightness = [15, 20, 45, 50, 60, 65, 92, 97];
+    const baseNames = ['base03', 'base02', 'base01', 'base00', 'base0', 'base1', 'base2', 'base3'];
+
+    function updateTheme() {
+      const hue = parseInt(hueSlider.value);
+      const emphasis = parseFloat(contrastSlider.value);
+      
+      hueVal.textContent = hue;
+      contrastVal.textContent = emphasis.toFixed(1);
+
+      const adjustedLightness = baseLightness.map(l => {
+        if (l <= 20) return 45 - ((45 - l) * emphasis); 
+        if (l >= 92) return 65 + ((l - 65) * emphasis); 
+        return l; 
+      });
+
+      const root = document.documentElement;
+
+      // 1. Update Base Colors (Added % after the lightness calculation)
+      baseNames.forEach((name, index) => {
+        const lchString = `lch(${adjustedLightness[index].toFixed(1)}% var(--chroma-base) ${hue})`;
+        root.style.setProperty(`--${name}`, lchString);
+      });
+
+      // 2. Update Accent Colors
+      for (let i = 0; i < 8; i++) {
+        const rotatedHue = (hue + (i * 45)) % 360;
+        root.style.setProperty(`--acc${i}`, `lch(var(--lightness-accent) var(--chroma-accent) ${rotatedHue})`);
+      }
+
+      renderSwatches();
+    }
+
+    function renderSwatches() {
+      const baseContainer = document.getElementById('basePalette');
+      const accentContainer = document.getElementById('accentPalette');
+      
+      baseContainer.innerHTML = '';
+      accentContainer.innerHTML = '';
+
+      // Render Bases
+      baseNames.forEach(name => {
+        const div = document.createElement('div');
+        div.className = 'swatch';
+        div.style.backgroundColor = `var(--${name})`;
+        div.textContent = name;
+        baseContainer.appendChild(div);
+      });
+
+      // Render Accents
+      for (let i = 0; i < 8; i++) {
+        const div = document.createElement('div');
+        div.className = 'swatch';
+        div.style.backgroundColor = `var(--acc${i})`;
+        div.textContent = `acc${i}`;
+        accentContainer.appendChild(div);
+      }
+    }
+
+    // Event Listeners
+    hueSlider.addEventListener('input', updateTheme);
+    contrastSlider.addEventListener('input', updateTheme);
+    modeToggle.addEventListener('change', (e) => {
+      document.body.setAttribute('data-theme', e.target.checked ? 'light' : 'dark');
+    });
+
+    // Initialize
+    updateTheme();
+  </script>
+</body>
+</html>
