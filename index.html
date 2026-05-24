@@ -71,14 +71,48 @@
       border-radius: 8px;
       margin-bottom: 2rem;
       display: grid;
-      gap: 1rem;
+      gap: 1.5rem;
       border: 1px solid var(--text-subtle);
+    }
+
+    .control-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+
+    .advanced-section {
+      border-top: 1px solid var(--text-subtle);
+      padding-top: 1.5rem;
+      display: none;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+    .advanced-section.visible {
+      display: grid;
     }
 
     .control-group {
       display: flex;
       flex-direction: column;
       gap: 0.5rem;
+    }
+
+    .toggle-btn {
+      background: none;
+      border: 1px solid var(--acc0);
+      color: var(--acc0);
+      padding: 0.4rem 0.8rem;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.8rem;
+      align-self: flex-start;
+      margin-top: 0.5rem;
+    }
+    .toggle-btn:hover {
+      background: rgba(var(--acc0), 0.1);
+      border-color: var(--acc1);
+      color: var(--acc1);
     }
 
     label {
@@ -160,28 +194,42 @@
     </header>
 
     <div class="controls">
-      <div class="control-group">
-        <label for="hueSlider">Base Hue (<span id="hueVal">210</span>&deg;)</label>
-        <input type="range" id="hueSlider" min="0" max="360" value="210">
+      <div class="control-grid">
+        <div class="control-group">
+          <label for="hueSlider">Base Hue (<span id="hueVal">210</span>&deg;)</label>
+          <input type="range" id="hueSlider" min="0" max="360" value="210">
+        </div>
+        <div class="control-group">
+          <label for="formatSelect">Display Format</label>
+          <select id="formatSelect">
+            <option value="all">Show All</option>
+            <option value="HEX" selected>Hex Only</option>
+            <option value="RGB">RGB Only</option>
+            <option value="HSL">HSL Only</option>
+            <option value="none">None</option>
+          </select>
+        </div>
+        <div class="control-group">
+          <label>
+            <input type="checkbox" id="modeToggle"> Enable Light Mode
+          </label>
+          <button class="toggle-btn" id="advancedToggle">Show Advanced Controls</button>
+        </div>
       </div>
-      <div class="control-group">
-        <label for="contrastSlider">Contrast Emphasis (<span id="contrastVal">1.0</span>x)</label>
-        <input type="range" id="contrastSlider" min="0.5" max="1.5" step="0.1" value="1.0">
-      </div>
-      <div class="control-group">
-        <label>
-          <input type="checkbox" id="modeToggle"> Enable Light Mode
-        </label>
-      </div>
-      <div class="control-group">
-        <label for="formatSelect">Display Format</label>
-        <select id="formatSelect">
-          <option value="all">Show All</option>
-          <option value="HEX" selected>Hex Only</option>
-          <option value="RGB">RGB Only</option>
-          <option value="HSL">HSL Only</option>
-          <option value="none">None</option>
-        </select>
+
+      <div class="advanced-section" id="advancedControls">
+        <div class="control-group">
+          <label for="contrastSlider">Contrast Emphasis (<span id="contrastVal">1.0</span>x)</label>
+          <input type="range" id="contrastSlider" min="0.5" max="1.5" step="0.1" value="1.0">
+        </div>
+        <div class="control-group">
+          <label for="chromaSlider">Saturation (Chroma) (<span id="chromaVal">1.0</span>x)</label>
+          <input type="range" id="chromaSlider" min="0.0" max="2.0" step="0.1" value="1.0">
+        </div>
+        <div class="control-group">
+          <label for="lumSlider">Luminance Scale (<span id="lumVal">1.0</span>x)</label>
+          <input type="range" id="lumSlider" min="0.5" max="1.5" step="0.05" value="1.0">
+        </div>
       </div>
     </div>
 
@@ -209,40 +257,59 @@
   <script>
     const hueSlider = document.getElementById('hueSlider');
     const contrastSlider = document.getElementById('contrastSlider');
+    const chromaSlider = document.getElementById('chromaSlider');
+    const lumSlider = document.getElementById('lumSlider');
     const modeToggle = document.getElementById('modeToggle');
+    const advancedToggle = document.getElementById('advancedToggle');
+    const advancedControls = document.getElementById('advancedControls');
+    
     const hueVal = document.getElementById('hueVal');
     const contrastVal = document.getElementById('contrastVal');
+    const chromaVal = document.getElementById('chromaVal');
+    const lumVal = document.getElementById('lumVal');
     const formatSelect = document.getElementById('formatSelect');
     
     // The exact Solarized L* architecture
     const baseLightness = [15, 20, 45, 50, 60, 65, 92, 97];
     const baseNames = ['base03', 'base02', 'base01', 'base00', 'base0', 'base1', 'base2', 'base3'];
 
+    const DEFAULT_CHROMA_BASE = 12;
+    const DEFAULT_CHROMA_ACCENT = 65;
+    const DEFAULT_LUMINANCE_ACCENT = 60;
+
     function updateTheme() {
       const hue = parseInt(hueSlider.value);
       const emphasis = parseFloat(contrastSlider.value);
+      const saturation = parseFloat(chromaSlider.value);
+      const luminance = parseFloat(lumSlider.value);
       
       hueVal.textContent = hue;
       contrastVal.textContent = emphasis.toFixed(1);
+      chromaVal.textContent = saturation.toFixed(1);
+      lumVal.textContent = luminance.toFixed(1);
 
       const adjustedLightness = baseLightness.map(l => {
-        if (l <= 20) return 45 - ((45 - l) * emphasis); 
-        if (l >= 92) return 65 + ((l - 65) * emphasis); 
-        return l; 
+        let base = l;
+        if (l <= 20) base = 45 - ((45 - l) * emphasis); 
+        if (l >= 92) base = 65 + ((l - 65) * emphasis); 
+        return Math.min(100, Math.max(0, base * luminance)); 
       });
 
       const root = document.documentElement;
+      const currentChromaBase = DEFAULT_CHROMA_BASE * saturation;
+      const currentChromaAccent = DEFAULT_CHROMA_ACCENT * saturation;
+      const currentLuminanceAccent = Math.min(100, DEFAULT_LUMINANCE_ACCENT * luminance);
 
       // 1. Update Base Colors
       baseNames.forEach((name, index) => {
-        const lchString = `lch(${adjustedLightness[index].toFixed(1)}% var(--chroma-base) ${hue})`;
+        const lchString = `lch(${adjustedLightness[index].toFixed(1)}% ${currentChromaBase.toFixed(1)} ${hue})`;
         root.style.setProperty(`--${name}`, lchString);
       });
 
       // 2. Update Accent Colors
       for (let i = 0; i < 8; i++) {
         const rotatedHue = (hue + (i * 45)) % 360;
-        root.style.setProperty(`--acc${i}`, `lch(var(--lightness-accent) var(--chroma-accent) ${rotatedHue})`);
+        root.style.setProperty(`--acc${i}`, `lch(${currentLuminanceAccent.toFixed(1)}% ${currentChromaAccent.toFixed(1)} ${rotatedHue})`);
       }
 
       // We need a small delay or requestAnimationFrame to ensure CSS variables are applied
@@ -395,7 +462,15 @@
     // Event Listeners
     hueSlider.addEventListener('input', updateTheme);
     contrastSlider.addEventListener('input', updateTheme);
+    chromaSlider.addEventListener('input', updateTheme);
+    lumSlider.addEventListener('input', updateTheme);
     formatSelect.addEventListener('change', renderSwatches);
+    
+    advancedToggle.addEventListener('click', () => {
+      const isVisible = advancedControls.classList.toggle('visible');
+      advancedToggle.textContent = isVisible ? 'Hide Advanced Controls' : 'Show Advanced Controls';
+    });
+
     modeToggle.addEventListener('change', (e) => {
       document.body.setAttribute('data-theme', e.target.checked ? 'light' : 'dark');
     });
